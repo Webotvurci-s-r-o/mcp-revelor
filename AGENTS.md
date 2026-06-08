@@ -86,17 +86,68 @@ For Claude Desktop:
 
 ---
 
-## Step 6 — Verify
+## Step 6 — Verify it works
 
 In a fresh conversation, the user can try:
 
 > *"Use Revelor MCP, call health"*
 
-Expected: a JSON-ish answer with `status`, `tenant_id`, and `components`. If you see that, setup worked.
+Expected: a JSON answer with `status`, `tenant_id`, and `components`. If you see that, setup worked.
 
-Other suggestions to try:
-- *"Show me top 10 searched words in the last 30 days"*
-- *"How's my search CTR for the last week?"*
+---
+
+## Step 7 — Onboard the user (proactively show what they can do)
+
+**Important — don't leave the user wondering "now what?"** After you confirm setup works (Step 6), immediately give them a short welcome message tailored to their token type.
+
+### If the token is read-only (`🛡️ MCP — read only`):
+
+Send a message like this (translate to the user's language):
+
+> **🎉 Setup hotov.** Tvůj AI asistent teď umí číst data z Revelor instance `<tenant_id>`. Můžeš se ptát například na:
+>
+> **📊 Performance & metriky**
+> - *"Jak jsem na tom se searchem za posledních 30 dní?"*
+> - *"Top 10 nejhledanějších slov za 90 dní"*
+> - *"Konverzní rate ze search-sessions vs bez search"*
+>
+> **🔍 Problémy v searchi**
+> - *"Co lidi hledají a nenajdou (zero-result queries)?"*
+> - *"Jaké je průměrné CTR z výsledků vyhledávání?"*
+> - *"Pomalé dotazy — kolik je p95 latence?"*
+>
+> **⚙️ Konfigurace**
+> - *"Ukaž mi moje aktuální synonyma"*
+> - *"Jaké recommendation strategie mám zapnuté?"*
+>
+> Stačí napsat normální větu, AI vybere správný nástroj sám.
+>
+> *Pozn.: tvůj token je read-only — pro úpravy (synonyma, pinning, váhy) vygeneruj v dashboardu token s rolí 🚀 MCP — full access.*
+
+### If the token is full-access (`🚀 MCP — full access`):
+
+Same as above + ADD this block:
+
+> **🛠️ Úpravy přes AI** (full-access token)
+> Můžeš nechat AI rovnou ladit search za sebe:
+> - *"Přidej synonymum mobil → telefon, dry-run"*
+> - *"Pinni produkt ABC na pozici 1 v Vánoce kategorii"*
+> - *"Skryj produkt XYZ ze searche"*
+> - *"Boostni produkt DEF s manual_boost 2.0"*
+> - *"Zvyš click_weight v rankingu z 1.0 na 1.3"*
+>
+> AI vždy ukáže `dry_run` plán a počká na tvoje potvrzení před zápisem.
+
+### Tone guidelines
+
+- **Use the user's language** (Czech most of the time; ask if unsure)
+- **3–5 starter prompts** per category — not 20 (don't overwhelm)
+- **Pick examples relevant to e-commerce** (e-shop, search, conversion, synonyma)
+- **Tell them about the safety net**: "AI nemůže smazat data, číst customery, ani opustit tvůj shop"
+
+### Full list of categories & prompts
+
+See [docs/EXAMPLES.md](docs/EXAMPLES.md) for the comprehensive list (~30 prompts across 7 categories). Don't paste the whole file — pick 5–10 most relevant.
 
 ---
 
@@ -152,6 +203,7 @@ See [README.md](README.md) § *Security model* for full guarantees.
 2. Find `claude_desktop_config.json` (or equivalent).
 3. Merge in the `mcp-revelor` entry shown in Step 3.
 4. Tell user to restart Claude Desktop.
-5. Suggest test prompt: *"Use Revelor MCP, call health"*.
+5. After restart: verify with *"Use Revelor MCP, call health"*.
+6. **Onboard** — send the welcome message from Step 7 with 5–10 example prompts. Don't leave user with "now what?".
 
 Done.
