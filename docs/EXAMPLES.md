@@ -1,102 +1,102 @@
-# Example prompts for Revelor MCP
+# Příklady promptů pro Revelor MCP
 
-After installation, try any of these in your AI chat (Claude Desktop, Cursor, etc.).
-
----
-
-## 📊 Daily / weekly performance check
-
-> *"How's my Revelor search performance for the last 7 days? Total searches, CTR, conversion rate."*
-
-> *"Show me a daily breakdown of search volume for the last 30 days."*
-
-> *"What's my zero-result rate? Has it changed compared to the previous week?"*
+Po instalaci zkus v AI chatu (Claude Desktop, Cursor...) cokoli z níže uvedeného.
 
 ---
 
-## 🔍 Discover problems (the "what's broken" prompts)
+## 📊 Denní / týdenní performance check
 
-> *"What are my top 20 zero-result queries this month? People searched for these and got nothing."*
+> *„Jak je na tom můj Revelor search za posledních 7 dní? Total search, CTR, conversion rate."*
 
-> *"Compare conversion rate from search-sessions vs no-search-sessions for the last 30 days. Is search lifting conversions?"*
+> *„Ukaž denní rozložení search volume za posledních 30 dní."*
 
-> *"Average search response time over the last 7 days — any outliers?"*
-
-> *"Top 50 most-searched words last 90 days, sorted by count. Highlight ones with low result count."*
+> *„Jaký mám zero-result rate? Změnilo se to oproti minulému týdnu?"*
 
 ---
 
-## 🎯 Recommendations & relevance check
+## 🔍 Najít problémy v searchi
 
-> *"What recommendations are being shown on the homepage? Are they performing — CTR, conversion?"*
+> *„Co lidi nejvíc hledali a nic nenašli (top 20 zero-result queries za měsíc)?"*
 
-> *"Which products get clicked most from recommendation widgets? Top 20 over 30 days."*
+> *„Porovnej conversion rate sessions s searchem vs bez searche za 30 dní. Zvyšuje search konverze?"*
 
-> *"Are my partner / affiliate recommendations driving revenue? Show last-30-days analytics."*
+> *„Průměrná response time vyhledávání za posledních 7 dní — najdi outliers."*
 
----
-
-## ⚙️ Configuration inspection
-
-> *"Show me my current synonyms config from Revelor settings."*
-
-> *"What recommendation strategies are currently active for which placements?"*
-
-> *"What are my CTR ranking weights right now?"*
+> *„Top 50 nejhledanějších slov za 90 dní, seřaď podle počtu. Vyznač ta s nízkým počtem výsledků."*
 
 ---
 
-## 🛠️ AI-assisted search tuning (`full` mode only)
+## 🎯 Doporučení (recommendations) & relevance
 
-> *"Add a synonym 'mobil → telefon, mobilní telefon'. Dry-run first."*
+> *„Jaká doporučení se zobrazují na homepage? Performují? Ukaž CTR a konverze."*
 
-> *"Pin product GUID `abc-123` to position 1 in top items for category 'Christmas'."*
+> *„Které produkty se nejvíc klikají z recommendation widgetů? Top 20 za 30 dní."*
 
-> *"Hide product GUID `xyz-456` from search — out of stock long-term."*
-
-> *"Increase click_weight in ranking from 1.0 to 1.3 — show me the dry-run preview first, then apply if I confirm."*
-
-> *"Boost product GUID `vip-789` with manual_boost 2.0."*
+> *„Vydělávají moje partner recommendation analytics? Ukaž last-30-days."*
 
 ---
 
-## 🧠 Strategic / exploratory
+## ⚙️ Konfigurace (jen čtení)
 
-> *"Based on my last-30-days search analytics, suggest 3 improvements to ranking or synonyms."*
+> *„Ukaž mi moje aktuální synonyma."*
 
-> *"Find my most-searched-but-zero-result queries and propose synonyms that would fix them. Use dry-run for each."*
+> *„Jaké recommendation strategie mám zapnuté pro které placement?"*
 
-> *"What category gets the worst CTR from search results? Why might that be?"*
-
----
-
-## 🔐 Safety net — what the AI cannot do
-
-The AI will refuse / get a 403 if you ask for:
-- Deleting any data (no delete endpoints exist)
-- Customer / order data (no PII access)
-- Cross-tenant access (token is locked to your shop)
-- Triggering scheduled sync, restarting services, modifying user accounts
-- Internal scoring / debug introspection (not exposed via MCP)
-
-All mutations support `dry_run` — preview before commit.
+> *„Jaké mám CTR ranking váhy v rankingu?"*
 
 ---
 
-## Multi-tenant
+## 🛠️ AI ladění vyhledávání (jen `full` mode)
 
-If you configured multiple Revelor instances (`mcp-revelor-shop-a`, `mcp-revelor-shop-b`), the AI knows about all of them. Address them by name:
+> *„Přidej synonymum 'mobil → telefon, mobilní telefon'. Dry-run nejdřív."*
 
-> *"In `mcp-revelor-shop-a`, what's the top searched word?"*
+> *„Pinni produkt GUID `abc-123` na pozici 1 do top items v kategorii 'Vánoce'."*
 
-> *"Compare CTR between shop-a and shop-b for last week."*
+> *„Skryj produkt GUID `xyz-456` z vyhledávání — dlouhodobě nedostupný."*
+
+> *„Zvyš click_weight v rankingu z 1.0 na 1.3 — ukaž dry-run preview a počkej na potvrzení, pak aplikuj."*
+
+> *„Boostni produkt GUID `vip-789` s manual_boost 2.0."*
 
 ---
 
-## Sales / development demo (mock mode)
+## 🧠 Strategická / průzkumná analytika
 
-Run MCP with `REVELOR_MCP_MODE=mock` (no live BE, no token needed) — returns bundled fixture data:
+> *„Na základě analytiky za posledních 30 dní mi navrhni 3 zlepšení v rankingu nebo synonymech."*
 
-> *"Show me search KPIs and recommend what we could improve."*
+> *„Najdi moje nejvíc hledané a nenalezené dotazy a navrhni synonyma co by je řešila. Pro každé dry-run."*
 
-> *"What products are getting low recommendation CTR? Suggest why."*
+> *„Která kategorie má nejhorší CTR ze search výsledků? Co s tím?"*
+
+---
+
+## 🔐 Bezpečnostní strop — co AI **nedokáže**
+
+AI dostane 403 / odmítnutí pokud chceš:
+- Smazat data (žádné delete endpointy neexistují)
+- Číst zákaznická data / objednávky (žádný PII přístup)
+- Cross-tenant přístup (token je vázaný na tvůj shop)
+- Spouštět scheduled sync, restartovat služby, upravovat user accounts
+- Vnitřní scoring / debug introspekci (není přes MCP vystavená)
+
+Všechny mutace podporují `dry_run` — AI ukáže plán před aplikací.
+
+---
+
+## Více obchodů (multi-tenant)
+
+Pokud máš nakonfigurováno víc Revelor instancí (`mcp-revelor-eshop-a`, `mcp-revelor-eshop-b`), AI vidí všechny. Adresuj je jménem:
+
+> *„V `mcp-revelor-eshop-a` co je nejhledanější slovo?"*
+
+> *„Porovnej CTR mezi shop-a a shop-b za minulý týden."*
+
+---
+
+## Sales / dev demo (mock mode)
+
+Spusť MCP s `REVELOR_MCP_MODE=mock` (žádný live BE, žádný token) — vrátí vestavěná fixture data:
+
+> *„Ukaž search KPI a doporuč co by se dalo zlepšit."*
+
+> *„Které produkty mají nízký recommendation CTR? Proč?"*
