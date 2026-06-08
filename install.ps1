@@ -65,8 +65,10 @@ if ($baseUrl -notmatch '^https?://') {
     exit 1
 }
 
-# Prompt for entry name
-$entryName = Read-Host "Nazev MCP zaznamu v configu [mcp-revelor]"
+# Prompt for entry name (Enter = pouzij default)
+Write-Host ""
+Write-Host "Nazev MCP zaznamu v configu (Enter = ponechat 'mcp-revelor'):"
+$entryName = Read-Host
 if ([string]::IsNullOrWhiteSpace($entryName)) { $entryName = "mcp-revelor" }
 
 # Create config directory

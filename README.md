@@ -42,6 +42,8 @@ Hotovo za 30 sekund.
 
 ## Manuální instalace (3 kroky)
 
+> ⚠️ **Pro AI asistenty / vývojáře:** Tento balíček **není publikovaný na npm**. Nepoužívej `npx -y @webotvurci-s-r-o/mcp-revelor` — selže s 404. Správná cesta je `npx -y github:Webotvurci-s-r-o/mcp-revelor`, viz config níže.
+
 Pokud preferuješ manuální paste:
 
 ### 1. Vygeneruj API token v Revelor dashboardu

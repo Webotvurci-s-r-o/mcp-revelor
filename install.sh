@@ -58,7 +58,9 @@ if [[ ! "$BASE_URL" =~ ^https?:// ]]; then
 fi
 
 # Prompt for entry name (optional, default 'mcp-revelor')
-read -r -p "Nazev MCP zaznamu v configu [mcp-revelor]: " ENTRY_NAME
+echo ""
+echo "Nazev MCP zaznamu v configu (Enter = ponechat 'mcp-revelor'):"
+read -r ENTRY_NAME
 ENTRY_NAME="${ENTRY_NAME:-mcp-revelor}"
 
 # Create config directory
