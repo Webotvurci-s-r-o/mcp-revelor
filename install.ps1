@@ -3,6 +3,8 @@
 #   iwr -useb https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.ps1 | iex
 #
 # Kompatibilita: Windows PowerShell 5.1 (Win10/11 default) i PowerShell 7+.
+# Detekuje obe varianty Claude Desktop: Microsoft Store (MSIX, sandboxed)
+# i standardni .exe installer.
 
 $ErrorActionPreference = "Stop"
 
@@ -26,11 +28,39 @@ function ConvertTo-OrderedDict {
     return $dict
 }
 
+# Najde skutecnou cestu, kterou ctena varianta Claude Desktop pouziva.
+# Microsoft Store (MSIX) verze bezi v sandboxu a cte z LocalCache, nikoliv
+# z %APPDATA%\Claude\. Pokud bychom zapsali do standardni cesty, MSIX appka
+# ho nikdy nenajde a zadny MCP server nenahraje — proto tato detekce.
+function Find-ClaudeConfigPath {
+    # 1) MSIX (Microsoft Store) Claude — package_<hash> folder pod LOCALAPPDATA\Packages\
+    $msixCandidates = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like 'Claude_*' }
+    foreach ($pkg in $msixCandidates) {
+        $sandboxPath = Join-Path $pkg.FullName "LocalCache\Roaming\Claude\claude_desktop_config.json"
+        $sandboxDir = Split-Path $sandboxPath
+        if (Test-Path $sandboxDir) {
+            return [PSCustomObject]@{
+                Path = $sandboxPath
+                Variant = "Microsoft Store (MSIX, sandboxed)"
+            }
+        }
+    }
+    # 2) Standardni .exe installer — %APPDATA%\Claude\
+    return [PSCustomObject]@{
+        Path = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+        Variant = "Standardni (.exe installer)"
+    }
+}
+
 Write-Color "=== Revelor MCP installer ===" Cyan
 Write-Host ""
 
-# Config path on Windows
-$config = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+# Detekce Claude Desktop varianty + spravna cesta
+$claudeInfo = Find-ClaudeConfigPath
+$config = $claudeInfo.Path
+Write-Color "OK Claude Desktop detekovan: $($claudeInfo.Variant)" Green
+Write-Host "   Config bude zapsan do: $config"
 
 # Check Node.js
 $node = Get-Command node -ErrorAction SilentlyContinue
@@ -105,10 +135,6 @@ if (-not $cfg.Contains("mcpServers")) {
     $cfg["mcpServers"] = [ordered]@{}
 }
 
-# Pokud mcpServers prislo z JSON jako neco jineho nez OrderedDictionary,
-# nech ho byt — Pridat klic ale ne prepisovat strukturu.
-# (Vyjimka: pokud je to PSCustomObject, prevedeme — to uz delame v ConvertTo-OrderedDict.)
-
 # Add/update entry
 $cfg["mcpServers"][$entryName] = [ordered]@{
     command = "npx"
@@ -130,48 +156,37 @@ $token = $null
 [System.GC]::Collect()
 
 Write-Host ""
-Write-Color "OK Config aktualizovan: $config" Green
+Write-Color "===========================================================" Green
+Write-Color "  HOTOVO - config zapsan." Green
+Write-Color "===========================================================" Green
 Write-Host ""
-Write-Color "=== Dalsi kroky ===" Cyan
+Write-Host "Cesta: $config"
 Write-Host ""
-Write-Color "1. Ukoncit Claude Desktop UPLNE (ne jen zavrit okno)" Yellow
-Write-Host "   - V system tray (vpravo dole, vedle hodin) najdi ikonu Claude"
-Write-Host "   - Klikni pravym -> Quit / Ukoncit"
-Write-Host "   - POZOR: pouhe zavreni okna (X) ho nevypne, bezi dal v tray"
-Write-Host "   - Pripadne pres Task Manager: ukoncit vsechny 'Claude.exe' procesy"
+Write-Color "Co udelat ted (presne):" Yellow
 Write-Host ""
-Write-Color "2. Spustit Claude Desktop znovu" Yellow
-Write-Host "   - Pri prvnim spusteni stahne npx automaticky balicek mcp-revelor"
-Write-Host "     (cca 5-30 sekund podle rychlosti internetu)"
+Write-Host "  1) Ukoncit Claude Desktop UPLNE:"
+Write-Host "     - Stisknout Ctrl+Shift+Esc (Task Manager)"
+Write-Host "     - Najit vsechny radky 's nazvem 'Claude' (muze jich byt nekolik)"
+Write-Host "     - Kliknout pravym -> End task na kazdy"
+Write-Host "     (Pouhe zavreni okna 'X' nestaci - bezi dal v tray.)"
 Write-Host ""
-Write-Color "3. Overit ze MCP server bezi" Yellow
-Write-Host "   - Otevri novou konverzaci"
-Write-Host "   - Dole v chat vstupnim poli klikni na ikonu se 'sliderem' / 'pluginy'"
-Write-Host "     (Settings & tools -> Connectors / Tools)"
-Write-Host "   - Mel bys videt 'mcp-revelor' v seznamu pripojenych nastroju"
-Write-Host "   - Pokud tam neni: viz Troubleshooting nize"
+Write-Host "  2) Spustit Claude Desktop znovu (Start menu -> Claude)"
 Write-Host ""
-Write-Color "4. Vyzkousej dotaz" Yellow
-Write-Host "   - Napis: 'Pouzij Revelor MCP, zavolej health'"
-Write-Host "   - Claude zavola nastroj a vrati zdravotni stav e-shopu"
+Write-Host "  3) Otevri NOVOU konverzaci a napis:"
+Write-Host "     'Pouzij Revelor MCP, zavolej health'"
 Write-Host ""
-Write-Color "=== Troubleshooting ===" Cyan
+Write-Host "  Pri prvnim spusteni stahne npx balicek mcp-revelor (cca 10s)."
 Write-Host ""
-Write-Host "Pokud Claude Desktop nezobrazi mcp-revelor v Tools:"
+Write-Color "===========================================================" Cyan
+Write-Color "  POKUD by Claude Desktop MCP nenasel, vloz config rucne:" Cyan
+Write-Color "===========================================================" Cyan
 Write-Host ""
-Write-Host "  a) Overit ze config je validni JSON:"
-Write-Host "     Get-Content '$config' | ConvertFrom-Json"
-Write-Host "     (Mel by vypsat strukturu bez chyby)"
+Write-Host "  1) Otevri tento soubor v Notepadu:"
+Write-Host "     $config"
 Write-Host ""
-Write-Host "  b) Mrknout do logu Claude Desktop:"
-Write-Host "     `$env:APPDATA\Claude\logs\"
-Write-Host "     Hledat 'mcp-revelor' nebo 'mcp' v souborech mcp*.log"
+Write-Host "  2) Mel by obsahovat (s tvym tokenem + URL):"
 Write-Host ""
-Write-Host "  c) Manualne overit npx:"
-Write-Host "     npx -y github:Webotvurci-s-r-o/mcp-revelor --help"
-Write-Host "     (Pokud selze, problem je v Node.js / npm konfiguraci)"
+Get-Content $config | ForEach-Object { Write-Host "     $_" }
 Write-Host ""
-Write-Host "  d) Backup configu byl ulozen do:"
-Write-Host "     $config.backup-*"
+Write-Host "  3) Pokud chybi, vloz vyse uvedeny obsah, uloz, restartuj Claude."
 Write-Host ""
-Write-Color "Hotovo!" Green
