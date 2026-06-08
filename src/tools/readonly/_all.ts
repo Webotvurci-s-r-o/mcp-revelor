@@ -1,0 +1,24 @@
+import { registerTool } from '../registry.js';
+import { healthTool } from './health.js';
+import { searchMetricsTool } from './search_metrics.js';
+import { searchEngineStatusTool } from './search_engine_status.js';
+import { syncStatusTool } from './sync_status.js';
+import { inspectSettingsTool } from './inspect_settings.js';
+import { searchPerformanceTool } from './search_performance.js';
+import { conversionStatsTool } from './conversion_stats.js';
+import { recommendationMetricsTool } from './recommendation_metrics.js';
+import { recommendationsTool } from './recommendations.js';
+import { partnerRecommendationsAnalyticsTool } from './partner_recommendations_analytics.js';
+import { searchLogsTool } from './search_logs.js';
+
+registerTool(healthTool);
+registerTool(searchMetricsTool);
+registerTool(searchEngineStatusTool);
+registerTool(syncStatusTool);
+registerTool(inspectSettingsTool);
+registerTool(searchPerformanceTool);
+registerTool(conversionStatsTool);
+registerTool(recommendationMetricsTool);
+registerTool(recommendationsTool);
+registerTool(partnerRecommendationsAnalyticsTool);
+registerTool(searchLogsTool);

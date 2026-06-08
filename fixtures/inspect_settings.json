@@ -1,0 +1,6 @@
+{
+  "sync_source": "api",
+  "hide_revenue": false,
+  "dashboard_polling": { "mode": "interval", "seconds": 1800 },
+  "audience_segments": [{ "key": "returning_buyer", "label": "Vrátil se a koupil" }]
+}

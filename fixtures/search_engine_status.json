@@ -1,0 +1,6 @@
+{
+  "status": "ok",
+  "products_indexed": 8432,
+  "latency_ms": { "p50": 23, "p95": 89, "p99": 142 },
+  "cluster_health": "green"
+}

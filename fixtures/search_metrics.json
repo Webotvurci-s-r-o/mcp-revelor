@@ -1,0 +1,15 @@
+{
+  "summary": {
+    "searches_total": 12450,
+    "zero_results_rate": 0.034,
+    "click_through_rate": 0.421,
+    "conversion_rate": 0.087
+  },
+  "timeseries": [
+    {"date": "2026-05-07", "searches": 1820, "zero_results": 61},
+    {"date": "2026-05-08", "searches": 1942, "zero_results": 55}
+  ],
+  "top_queries": [{"query": "bota", "count": 234}],
+  "zero_result_queries": [{"query": "iphone 15 černý", "count": 12}],
+  "top_clicked_products": [{"product_id": "abc-123", "clicks": 89}]
+}

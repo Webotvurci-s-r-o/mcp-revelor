@@ -1,0 +1,6 @@
+{
+  "response_time_ms": { "p50": 18, "p95": 67, "p99": 134 },
+  "cache_hit_rate": 0.34,
+  "autocomplete_usage_rate": 0.61,
+  "queries_with_filters_rate": 0.12
+}

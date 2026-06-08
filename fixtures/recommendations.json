@@ -1,0 +1,15 @@
+{
+  "placement": "product_detail",
+  "strategy_used": "hybrid_similarity",
+  "items": [
+    {
+      "id": "p-100",
+      "name": "Produkt A",
+      "price": 299,
+      "currency": "CZK",
+      "image_url": "https://...",
+      "url": "/p/a"
+    }
+  ],
+  "total": 1
+}

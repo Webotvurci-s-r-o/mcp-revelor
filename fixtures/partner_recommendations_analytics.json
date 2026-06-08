@@ -1,0 +1,11 @@
+{
+  "impressions": 18234,
+  "ctr": 0.0721,
+  "conversions": 142,
+  "revenue": 42890.50,
+  "breakdown_by_placement": {
+    "homepage": { "ctr": 0.05 },
+    "product_detail": { "ctr": 0.09 }
+  },
+  "top_products": []
+}

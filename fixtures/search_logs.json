@@ -1,0 +1,23 @@
+{
+  "logs": [
+    {
+      "query": "bota",
+      "timestamp": "2026-05-14T09:23:00Z",
+      "total_hits": 47,
+      "response_time_ms": 23,
+      "type": "fulltext",
+      "cached": false
+    },
+    {
+      "query": "iphone 15 černý",
+      "timestamp": "2026-05-14T09:24:00Z",
+      "total_hits": 0,
+      "response_time_ms": 18,
+      "type": "fulltext",
+      "cached": false
+    }
+  ],
+  "total": 2,
+  "limit": 50,
+  "offset": 0
+}

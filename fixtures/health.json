@@ -1,0 +1,6 @@
+{
+  "status": "ok",
+  "tenant_id": "demo_tenant_001",
+  "components": { "search_engine": "ok", "sync": "ok", "backend": "ok" },
+  "timestamp": "2026-05-14T10:00:00Z"
+}
