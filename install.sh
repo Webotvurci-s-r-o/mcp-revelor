@@ -1,123 +1,148 @@
 #!/usr/bin/env bash
-# Revelor MCP — one-line installer for macOS / Linux
+# Revelor MCP — one-liner installer (macOS / Linux)
 # Usage:
 #   bash <(curl -sSL https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.sh)
+#
+# Tento skript pouze vygeneruje hotovy MCP config a vloží ho do schránky
+# (pbcopy/xclip/wl-copy). Skutečné "zapojení" do Claude Desktop uděláš
+# v dalším kroku (Settings → Developer → Edit Config → ⌘V / Ctrl+V) —
+# Claude sám zná správnou cestu pro tvou variantu.
+
 set -euo pipefail
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+GRAY='\033[0;37m'
 NC='\033[0m'
 
-echo -e "${BLUE}=== Revelor MCP installer ===${NC}"
+echo -e "${BLUE}=== Revelor MCP installer (Krok 1) ===${NC}"
 echo ""
 
-# Detect OS + config path
-case "$(uname)" in
-    Darwin)  CONFIG="$HOME/Library/Application Support/Claude/claude_desktop_config.json" ;;
-    Linux)   CONFIG="$HOME/.config/Claude/claude_desktop_config.json" ;;
-    *)
-        echo -e "${RED}Nepodporovany OS: $(uname). Na Windows pouzij install.ps1.${NC}"
-        exit 1
-        ;;
-esac
-
-# Check Node.js
+# Check Node.js (warn but allow continue)
 if ! command -v node >/dev/null 2>&1; then
-    echo -e "${RED}Node.js neni nainstalovany.${NC}"
-    echo "Stahni LTS verzi z https://nodejs.org a pak skript spust znovu."
-    exit 1
+    echo -e "${YELLOW}POZOR: Node.js neni detekovany.${NC}"
+    echo "  Stáhni LTS verzi z https://nodejs.org a restartuj terminál."
+    echo "  Bez Node.js MCP server nepůjde spustit, ale config připravit můžeš."
+    echo ""
+    read -r -p "Pokračovat přesto a vygenerovat config? (a/N): " CONT
+    if [[ "$CONT" != "a" && "$CONT" != "A" && "$CONT" != "y" && "$CONT" != "Y" ]]; then
+        exit 1
+    fi
+else
+    NODE_VER=$(node --version)
+    echo -e "${GREEN}OK${NC} Node.js detekovan: $NODE_VER"
 fi
-NODE_VER=$(node --version)
-echo -e "${GREEN}✓${NC} Node.js detekovan: $NODE_VER"
 
-# Check Python (for JSON manipulation)
+# Check python3 (for JSON building)
 if ! command -v python3 >/dev/null 2>&1; then
-    echo -e "${RED}python3 neni nainstalovany (potreba pro JSON manipulaci).${NC}"
+    echo -e "${RED}python3 neni nainstalovany (potřeba pro generování JSON).${NC}"
     exit 1
 fi
 
-# Prompt for token (hidden input)
+# Prompt for token (hidden)
 echo ""
-echo "Otevri Revelor dashboard → tab '🤖 API tokeny pro agenty' → '+ Novy token'"
-echo "Po vygenerovani zkopiruj token (zacina 'rvlr_'):"
+echo "V Revelor dashboardu otevři tab 'API tokeny pro agenty'"
+echo "Klikni '+ Nový token' a zkopíruj výsledný token (začíná 'rvlr_'):"
 echo ""
-read -r -s -p "API token: " TOKEN
+read -r -s -p "API token (skryto): " TOKEN
 echo ""
 if [[ ! "$TOKEN" =~ ^rvlr_ ]]; then
-    echo -e "${RED}Token musi zacinat 'rvlr_'.${NC}"
+    echo -e "${RED}Token musí začínat 'rvlr_'.${NC}"
     exit 1
 fi
 
 # Prompt for base URL
-read -r -p "Revelor base URL (napr. https://moje-shop.revelor.cz): " BASE_URL
+read -r -p "Revelor base URL (např. https://moje-shop.revelor.cz): " BASE_URL
 if [[ ! "$BASE_URL" =~ ^https?:// ]]; then
-    echo -e "${RED}URL musi zacinat 'http://' nebo 'https://'.${NC}"
+    echo -e "${RED}URL musí začínat 'http://' nebo 'https://'.${NC}"
     exit 1
 fi
 
-# Prompt for entry name (optional, default 'mcp-revelor')
-echo ""
-echo "Nazev MCP zaznamu v configu (Enter = ponechat 'mcp-revelor'):"
-read -r ENTRY_NAME
-ENTRY_NAME="${ENTRY_NAME:-mcp-revelor}"
+# Build JSON via Python
+JSON_OUTPUT=$(REVELOR_TOKEN="$TOKEN" REVELOR_URL="$BASE_URL" python3 - <<'PYEOF'
+import json, os
+cfg = {
+    "mcpServers": {
+        "mcp-revelor": {
+            "command": "npx",
+            "args": ["-y", "github:Webotvurci-s-r-o/mcp-revelor"],
+            "env": {
+                "REVELOR_API_KEY": os.environ["REVELOR_TOKEN"],
+                "REVELOR_BASE_URL": os.environ["REVELOR_URL"],
+            },
+        }
+    }
+}
+print(json.dumps(cfg, indent=2, ensure_ascii=False))
+PYEOF
+)
 
-# Create config directory
-CONFIG_DIR=$(dirname "$CONFIG")
-mkdir -p "$CONFIG_DIR"
+# Forget plain-text token
+TOKEN=""
+unset TOKEN
 
-# Backup existing config (timestamped)
-if [ -f "$CONFIG" ]; then
-    BACKUP="${CONFIG}.backup-$(date +%Y%m%d-%H%M%S)"
-    cp "$CONFIG" "$BACKUP"
-    echo -e "${GREEN}✓${NC} Backup vytvoren: $BACKUP"
+# Try to copy to clipboard
+CLIPBOARD_TOOL="none"
+if command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "$JSON_OUTPUT" | pbcopy
+    CLIPBOARD_TOOL="pbcopy"
+elif command -v wl-copy >/dev/null 2>&1; then
+    printf '%s' "$JSON_OUTPUT" | wl-copy
+    CLIPBOARD_TOOL="wl-copy"
+elif command -v xclip >/dev/null 2>&1; then
+    printf '%s' "$JSON_OUTPUT" | xclip -selection clipboard
+    CLIPBOARD_TOOL="xclip"
+elif command -v xsel >/dev/null 2>&1; then
+    printf '%s' "$JSON_OUTPUT" | xsel --clipboard --input
+    CLIPBOARD_TOOL="xsel"
 fi
 
-# Modify config via Python (handles JSON safely + preserves other entries)
-REVELOR_TOKEN="$TOKEN" \
-REVELOR_URL="$BASE_URL" \
-REVELOR_ENTRY="$ENTRY_NAME" \
-REVELOR_CONFIG="$CONFIG" \
-python3 - <<'PYEOF'
-import json, os, sys
-
-config_path = os.environ["REVELOR_CONFIG"]
-entry = os.environ["REVELOR_ENTRY"]
-token = os.environ["REVELOR_TOKEN"]
-url = os.environ["REVELOR_URL"]
-
-cfg = {}
-if os.path.exists(config_path):
-    try:
-        with open(config_path, "r") as f:
-            content = f.read().strip()
-            cfg = json.loads(content) if content else {}
-    except json.JSONDecodeError:
-        print(f"WARN: Existing config is not valid JSON, starting fresh.")
-        cfg = {}
-
-cfg.setdefault("mcpServers", {})[entry] = {
-    "command": "npx",
-    "args": ["-y", "github:Webotvurci-s-r-o/mcp-revelor"],
-    "env": {
-        "REVELOR_API_KEY": token,
-        "REVELOR_BASE_URL": url,
-    },
-}
-
-with open(config_path, "w") as f:
-    json.dump(cfg, f, indent=2, ensure_ascii=False)
-
-print(f"OK: '{entry}' added to {config_path}")
-PYEOF
-
 echo ""
-echo -e "${GREEN}✓${NC} Config aktualizovan: $CONFIG"
+echo -e "${GREEN}===========================================================${NC}"
+echo -e "${GREEN}  KROK 1 HOTOVO${NC}"
+echo -e "${GREEN}===========================================================${NC}"
 echo ""
-echo -e "${YELLOW}Nyni:${NC}"
-echo "  1. Zavri Claude Desktop UPLNE (system tray → Quit, ne jen zavrit okno)"
-echo "  2. Spust ho znovu"
-echo "  3. V nove konverzaci zkus napsat: 'Pouzij Revelor MCP, zavolej health'"
+if [ "$CLIPBOARD_TOOL" != "none" ]; then
+    echo -e "${GREEN}OK${NC} Config je ve schránce (přes ${CLIPBOARD_TOOL}). V Kroku 2 stačí ⌘V / Ctrl+V."
+else
+    echo -e "${YELLOW}Schránka nedostupná (chybí pbcopy/xclip/xsel/wl-copy).${NC}"
+    echo "  Použij config vypsaný níže ('Tvůj config') — copy-paste ručně."
+fi
 echo ""
-echo -e "${GREEN}Hotovo!${NC} 🎉"
+echo -e "${CYAN}===========================================================${NC}"
+echo -e "${CYAN}  KROK 2 — vlož config do Claude Desktop${NC}"
+echo -e "${CYAN}===========================================================${NC}"
+echo ""
+echo "  1) Otevři Claude Desktop"
+echo ""
+echo "  2) Klikni na své jméno / 'Settings' (vlevo dole)"
+echo "     → v levé liště vyber kartu 'Developer'"
+echo ""
+echo "  3) Klikni na tlačítko 'Edit Config'"
+echo "     (Claude sám otevře 'claude_desktop_config.json' v editoru)"
+echo ""
+echo "  4) Smaž celý obsah souboru (⌘A / Ctrl+A, Delete)"
+echo "     a vlož config ze schránky (⌘V / Ctrl+V)"
+echo ""
+echo "     Pokud už máš v Claude jiné MCP servery, místo 'smaž vše'"
+echo "     přidej jen blok 'mcp-revelor' dovnitř existující sekce"
+echo "     'mcpServers' { ... }."
+echo ""
+echo "  5) Ulož (⌘S / Ctrl+S) a zavři editor"
+echo ""
+echo "  6) Restartuj Claude Desktop ÚPLNĚ:"
+echo "     - macOS: ⌘Q nebo Claude → Quit Claude, pak spustit znovu"
+echo "     - Linux: zavřít okno + 'kill' všechny Claude procesy (htop / Activity Monitor)"
+echo ""
+echo "  7) V nové konverzaci napiš:"
+echo "     'Použij Revelor MCP, zavolej health'"
+echo ""
+echo -e "${GRAY}===========================================================${NC}"
+echo -e "${GRAY}  Tvůj config (kdyby schránka nezkopírovala):${NC}"
+echo -e "${GRAY}===========================================================${NC}"
+echo ""
+echo "$JSON_OUTPUT" | sed 's/^/  /'
+echo ""

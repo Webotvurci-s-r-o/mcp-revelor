@@ -1,10 +1,13 @@
-# Revelor MCP — one-line installer for Windows (PowerShell)
+# Revelor MCP — one-liner installer (Windows / PowerShell)
 # Usage:
 #   iwr -useb https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.ps1 | iex
 #
+# Tento skript pouze vygeneruje hotovy MCP config a vlozi ti ho do schranky.
+# Skutecne 'zapojeni' do Claude Desktop udelas v dalsim kroku (Settings ->
+# Developer -> Edit Config -> Ctrl+V) — Claude sam zna spravnou cestu pro
+# tvoji verzi (standardni .exe / Microsoft Store / future varianty).
+#
 # Kompatibilita: Windows PowerShell 5.1 (Win10/11 default) i PowerShell 7+.
-# Detekuje obe varianty Claude Desktop: Microsoft Store (MSIX, sandboxed)
-# i standardni .exe installer.
 
 $ErrorActionPreference = "Stop"
 
@@ -12,70 +15,28 @@ function Write-Color($Text, $Color = "White") {
     Write-Host $Text -ForegroundColor $Color
 }
 
-# Convert PSCustomObject (z ConvertFrom-Json) na OrderedDictionary
-# rekurzivne — abychom mohli pridavat / cist klice jednotne.
-function ConvertTo-OrderedDict {
-    param($InputObject)
-    if ($null -eq $InputObject) { return [ordered]@{} }
-    $dict = [ordered]@{}
-    foreach ($prop in $InputObject.PSObject.Properties) {
-        if ($prop.Value -is [PSCustomObject]) {
-            $dict[$prop.Name] = ConvertTo-OrderedDict $prop.Value
-        } else {
-            $dict[$prop.Name] = $prop.Value
-        }
-    }
-    return $dict
-}
-
-# Najde skutecnou cestu, kterou ctena varianta Claude Desktop pouziva.
-# Microsoft Store (MSIX) verze bezi v sandboxu a cte z LocalCache, nikoliv
-# z %APPDATA%\Claude\. Pokud bychom zapsali do standardni cesty, MSIX appka
-# ho nikdy nenajde a zadny MCP server nenahraje — proto tato detekce.
-function Find-ClaudeConfigPath {
-    # 1) MSIX (Microsoft Store) Claude — package_<hash> folder pod LOCALAPPDATA\Packages\
-    $msixCandidates = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -like 'Claude_*' }
-    foreach ($pkg in $msixCandidates) {
-        $sandboxPath = Join-Path $pkg.FullName "LocalCache\Roaming\Claude\claude_desktop_config.json"
-        $sandboxDir = Split-Path $sandboxPath
-        if (Test-Path $sandboxDir) {
-            return [PSCustomObject]@{
-                Path = $sandboxPath
-                Variant = "Microsoft Store (MSIX, sandboxed)"
-            }
-        }
-    }
-    # 2) Standardni .exe installer — %APPDATA%\Claude\
-    return [PSCustomObject]@{
-        Path = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
-        Variant = "Standardni (.exe installer)"
-    }
-}
-
-Write-Color "=== Revelor MCP installer ===" Cyan
+Write-Color "=== Revelor MCP installer (Krok 1) ===" Cyan
 Write-Host ""
 
-# Detekce Claude Desktop varianty + spravna cesta
-$claudeInfo = Find-ClaudeConfigPath
-$config = $claudeInfo.Path
-Write-Color "OK Claude Desktop detekovan: $($claudeInfo.Variant)" Green
-Write-Host "   Config bude zapsan do: $config"
-
-# Check Node.js
+# Check Node.js (pripominka; bez Node MCP server nenastartuje, ale config jde
+# pripravit i tak — klient si Node muze stahnout pozdeji)
 $node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $node) {
-    Write-Color "Node.js neni nainstalovany." Red
-    Write-Host "Stahni LTS verzi z https://nodejs.org a spust skript znovu."
-    exit 1
+    Write-Color "POZOR: Node.js neni detekovany." Yellow
+    Write-Host "  Stahni LTS verzi z https://nodejs.org a restartuj PowerShell."
+    Write-Host "  Bez Node.js MCP server nepujde spustit, ale config pripravit muzes."
+    Write-Host ""
+    $cont = Read-Host "Pokracovat presto a vygenerovat config? (a/N)"
+    if ($cont -notmatch '^[aAyY]') { exit 1 }
+} else {
+    $nodeVer = & node --version
+    Write-Color "OK Node.js detekovan: $nodeVer" Green
 }
-$nodeVer = & node --version
-Write-Color "OK Node.js detekovan: $nodeVer" Green
 
 # Prompt for token
 Write-Host ""
-Write-Host "Otevri Revelor dashboard -> tab 'API tokeny pro agenty' -> '+ Novy token'"
-Write-Host "Po vygenerovani zkopiruj token (zacina 'rvlr_'):"
+Write-Host "V Revelor dashboardu otevri tab 'API tokeny pro agenty'"
+Write-Host "Klikni '+ Novy token' a zkopiruj vysledny token (zacina 'rvlr_'):"
 Write-Host ""
 
 $tokenSecure = Read-Host "API token (skryto)" -AsSecureString
@@ -95,98 +56,79 @@ if ($baseUrl -notmatch '^https?://') {
     exit 1
 }
 
-# Prompt for entry name (Enter = pouzij default)
-Write-Host ""
-Write-Host "Nazev MCP zaznamu v configu (Enter = ponechat 'mcp-revelor'):"
-$entryName = Read-Host
-if ([string]::IsNullOrWhiteSpace($entryName)) { $entryName = "mcp-revelor" }
-
-# Create config directory
-$configDir = Split-Path $config
-if (-not (Test-Path $configDir)) {
-    New-Item -ItemType Directory -Path $configDir -Force | Out-Null
-}
-
-# Backup existing config
-if (Test-Path $config) {
-    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $backup = "$config.backup-$timestamp"
-    Copy-Item $config $backup
-    Write-Color "OK Backup vytvoren: $backup" Green
-}
-
-# Read existing config (parse via PSCustomObject — funguje v PS 5.1 i 7+)
-$cfg = [ordered]@{}
-if (Test-Path $config) {
-    try {
-        $content = Get-Content $config -Raw -Encoding UTF8
-        if (-not [string]::IsNullOrWhiteSpace($content)) {
-            $parsed = $content | ConvertFrom-Json -ErrorAction Stop
-            $cfg = ConvertTo-OrderedDict $parsed
+# Build config (vzdy cisty — klient bud nahradi cely soubor, nebo si vlozi
+# jen vnitrek 'mcp-revelor' bloku do existujici sekce mcpServers)
+$cfg = [ordered]@{
+    mcpServers = [ordered]@{
+        "mcp-revelor" = [ordered]@{
+            command = "npx"
+            args = @("-y", "github:Webotvurci-s-r-o/mcp-revelor")
+            env = [ordered]@{
+                REVELOR_API_KEY = $token
+                REVELOR_BASE_URL = $baseUrl
+            }
         }
-    } catch {
-        Write-Color "WARN: Existing config neni validni JSON, startuju cisty." Yellow
-        $cfg = [ordered]@{}
     }
 }
-
-# Ensure mcpServers exists (.Contains funguje na hashtable i OrderedDictionary)
-if (-not $cfg.Contains("mcpServers")) {
-    $cfg["mcpServers"] = [ordered]@{}
-}
-
-# Add/update entry
-$cfg["mcpServers"][$entryName] = [ordered]@{
-    command = "npx"
-    args = @("-y", "github:Webotvurci-s-r-o/mcp-revelor")
-    env = [ordered]@{
-        REVELOR_API_KEY = $token
-        REVELOR_BASE_URL = $baseUrl
-    }
-}
-
-# Write back — UTF-8 BEZ BOM
-# (PS 5.1 default `Out-File -Encoding utf8` vlozi BOM, Claude Desktop Node.js
-# JSON.parse to neumi a tise selze -> zadny MCP server se nenahraje.)
 $jsonOutput = $cfg | ConvertTo-Json -Depth 10
-[System.IO.File]::WriteAllText($config, $jsonOutput, (New-Object System.Text.UTF8Encoding($false)))
 
-# Clear plain-text token from memory ASAP
+# Token jiz neni potreba drzet v plain pameti
 $token = $null
 [System.GC]::Collect()
 
+# Copy to clipboard (Set-Clipboard je v Win PS 5.1+)
+$clipboardOk = $false
+try {
+    $jsonOutput | Set-Clipboard
+    $clipboardOk = $true
+} catch {
+    # Velmi vzacne — PS bez Microsoft.PowerShell.Management modulu
+}
+
 Write-Host ""
 Write-Color "===========================================================" Green
-Write-Color "  HOTOVO - config zapsan." Green
+Write-Color "  KROK 1 HOTOVO" Green
 Write-Color "===========================================================" Green
 Write-Host ""
-Write-Host "Cesta: $config"
+if ($clipboardOk) {
+    Write-Color "OK Config je ve schrance (clipboard). V dalsim kroku staci Ctrl+V." Green
+} else {
+    Write-Color "Schranka nedostupna - pouzij config vypsany nize ('Tvuj config')." Yellow
+}
 Write-Host ""
-Write-Color "Co udelat ted (presne):" Yellow
+Write-Color "===========================================================" Cyan
+Write-Color "  KROK 2 - vloz config do Claude Desktop" Cyan
+Write-Color "===========================================================" Cyan
 Write-Host ""
-Write-Host "  1) Ukoncit Claude Desktop UPLNE:"
-Write-Host "     - Stisknout Ctrl+Shift+Esc (Task Manager)"
-Write-Host "     - Najit vsechny radky 's nazvem 'Claude' (muze jich byt nekolik)"
-Write-Host "     - Kliknout pravym -> End task na kazdy"
-Write-Host "     (Pouhe zavreni okna 'X' nestaci - bezi dal v tray.)"
+Write-Host "  1) Otevri Claude Desktop"
 Write-Host ""
-Write-Host "  2) Spustit Claude Desktop znovu (Start menu -> Claude)"
+Write-Host "  2) Vlevo dole klikni na sve jmeno / 'Settings'"
+Write-Host "     -> v leve liste vyber kartu 'Developer'"
 Write-Host ""
-Write-Host "  3) Otevri NOVOU konverzaci a napis:"
+Write-Host "  3) Klikni na tlacitko 'Edit Config'"
+Write-Host "     (Claude sam otevre 'claude_desktop_config.json' v Notepadu)"
+Write-Host ""
+Write-Host "  4) Smaz cely obsah souboru (Ctrl+A, Delete)"
+Write-Host "     a vloz config ze schranky (Ctrl+V)"
+Write-Host ""
+Write-Host "     Pokud uz mas v Claude jine MCP servery (napr. Google Drive),"
+Write-Host "     misto 'smaz vse' pridej jen blok 'mcp-revelor' dovnitr existujici"
+Write-Host "     sekce 'mcpServers' { ... }."
+Write-Host ""
+Write-Host "  5) Uloz (Ctrl+S) a zavri editor"
+Write-Host ""
+Write-Host "  6) Restartuj Claude Desktop UPLNE:"
+Write-Host "     - Stiskni Ctrl+Shift+Esc (Task Manager)"
+Write-Host "     - Najdi vsechny procesy s nazvem 'Claude'"
+Write-Host "     - Pravym kliknout -> 'End task' (na kazdy)"
+Write-Host "     - Spust Claude znovu (Start menu -> Claude)"
+Write-Host ""
+Write-Host "  7) V nove konverzaci napis:"
 Write-Host "     'Pouzij Revelor MCP, zavolej health'"
 Write-Host ""
-Write-Host "  Pri prvnim spusteni stahne npx balicek mcp-revelor (cca 10s)."
+Write-Color "===========================================================" DarkGray
+Write-Color "  Tvuj config (pripadne ze schranky nezkopirovalo):" DarkGray
+Write-Color "===========================================================" DarkGray
 Write-Host ""
-Write-Color "===========================================================" Cyan
-Write-Color "  POKUD by Claude Desktop MCP nenasel, vloz config rucne:" Cyan
-Write-Color "===========================================================" Cyan
-Write-Host ""
-Write-Host "  1) Otevri tento soubor v Notepadu:"
-Write-Host "     $config"
-Write-Host ""
-Write-Host "  2) Mel by obsahovat (s tvym tokenem + URL):"
-Write-Host ""
-Get-Content $config | ForEach-Object { Write-Host "     $_" }
-Write-Host ""
-Write-Host "  3) Pokud chybi, vloz vyse uvedeny obsah, uloz, restartuj Claude."
+$jsonOutput -split "`n" | ForEach-Object { Write-Host "  $_" }
 Write-Host ""
