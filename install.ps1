@@ -1,0 +1,118 @@
+# Revelor MCP — one-line installer for Windows (PowerShell)
+# Usage:
+#   iwr -useb https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.ps1 | iex
+#
+# IMPORTANT: when piping from iwr | iex, interactive Read-Host can be flaky in some
+# PowerShell hosts. If that happens, save the script locally and run it directly.
+
+$ErrorActionPreference = "Stop"
+
+function Write-Color($Text, $Color = "White") {
+    Write-Host $Text -ForegroundColor $Color
+}
+
+Write-Color "=== Revelor MCP installer ===" Cyan
+Write-Host ""
+
+# Config path on Windows
+$config = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+
+# Check Node.js
+$node = Get-Command node -ErrorAction SilentlyContinue
+if (-not $node) {
+    Write-Color "Node.js neni nainstalovany." Red
+    Write-Host "Stahni LTS verzi z https://nodejs.org a spust skript znovu."
+    exit 1
+}
+$nodeVer = & node --version
+Write-Color "OK Node.js detekovan: $nodeVer" Green
+
+# Prompt for token
+Write-Host ""
+Write-Host "Otevri Revelor dashboard -> tab 'API tokeny pro agenty' -> '+ Novy token'"
+Write-Host "Po vygenerovani zkopiruj token (zacina 'rvlr_'):"
+Write-Host ""
+
+$tokenSecure = Read-Host "API token (skryto)" -AsSecureString
+$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenSecure)
+$token = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+
+if ($token -notmatch '^rvlr_') {
+    Write-Color "Token musi zacinat 'rvlr_'." Red
+    exit 1
+}
+
+# Prompt for URL
+$baseUrl = Read-Host "Revelor base URL (napr. https://moje-shop.revelor.cz)"
+if ($baseUrl -notmatch '^https?://') {
+    Write-Color "URL musi zacinat 'http://' nebo 'https://'." Red
+    exit 1
+}
+
+# Prompt for entry name
+$entryName = Read-Host "Nazev MCP zaznamu v configu [mcp-revelor]"
+if ([string]::IsNullOrWhiteSpace($entryName)) { $entryName = "mcp-revelor" }
+
+# Create config directory
+$configDir = Split-Path $config
+if (-not (Test-Path $configDir)) {
+    New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+}
+
+# Backup existing config
+if (Test-Path $config) {
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $backup = "$config.backup-$timestamp"
+    Copy-Item $config $backup
+    Write-Color "OK Backup vytvoren: $backup" Green
+}
+
+# Read existing config or start fresh
+$cfg = if (Test-Path $config) {
+    try {
+        $content = Get-Content $config -Raw -Encoding UTF8
+        if ([string]::IsNullOrWhiteSpace($content)) {
+            [ordered]@{}
+        } else {
+            $content | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+        }
+    } catch {
+        Write-Color "WARN: Existing config neni validni JSON, startuju cisty." Yellow
+        [ordered]@{}
+    }
+} else {
+    [ordered]@{}
+}
+
+# Ensure mcpServers exists
+if (-not $cfg.ContainsKey("mcpServers")) {
+    $cfg["mcpServers"] = [ordered]@{}
+}
+
+# Add/update entry
+$cfg["mcpServers"][$entryName] = [ordered]@{
+    command = "npx"
+    args = @("-y", "github:Webotvurci-s-r-o/mcp-revelor")
+    env = [ordered]@{
+        REVELOR_API_KEY = $token
+        REVELOR_BASE_URL = $baseUrl
+    }
+}
+
+# Write back
+$cfg | ConvertTo-Json -Depth 10 | Out-File $config -Encoding utf8
+
+# Clear plain-text token from memory ASAP
+$token = $null
+[System.GC]::Collect()
+
+Write-Host ""
+Write-Color "OK Config aktualizovan: $config" Green
+Write-Host ""
+Write-Color "Nyni:" Yellow
+Write-Host "  1. Zavri Claude Desktop UPLNE (system tray -> Quit, ne jen zavrit okno)"
+Write-Host "  2. Spust ho znovu"
+Write-Host "  3. V nove konverzaci zkus napsat: 'Pouzij Revelor MCP, zavolej health'"
+Write-Host ""
+Write-Color "Hotovo!" Green

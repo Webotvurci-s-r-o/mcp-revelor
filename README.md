@@ -12,7 +12,37 @@ Připojuje AI asistenta k tvým Revelor analytikám, nastavení vyhledávání a
 - **Zápis** (volitelný) — přidávání synonym, pinování top produktů, skrývání položek, ladění CTR vah
 - **Mock režim** — offline mode s vestavěnými fixtures pro vývoj
 
-## Rychlý start (3 kroky)
+## ⚡ One-liner instalace (doporučeno)
+
+Otevři terminál a vlož **jeden řádek** podle svého OS:
+
+**macOS / Linux:**
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.sh)
+```
+
+**Windows (PowerShell):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.ps1 | iex
+```
+
+Skript se zeptá na **2 věci**:
+1. **API token** z Revelor dashboardu (skrytý vstup — nevidět v terminálu)
+2. **URL** tvé Revelor instance
+
+Pak automaticky:
+- Najde `claude_desktop_config.json` per tvůj OS
+- Zazálohuje stávající config (`.backup-TIMESTAMP`)
+- Přidá záznam `mcp-revelor` bez přepsání ostatních
+- Řekne ti, ať restartuješ Claude Desktop
+
+Hotovo za 30 sekund.
+
+---
+
+## Manuální instalace (3 kroky)
+
+Pokud preferuješ manuální paste:
 
 ### 1. Vygeneruj API token v Revelor dashboardu
 

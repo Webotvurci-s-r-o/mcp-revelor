@@ -43,39 +43,51 @@ If user pastes a token in chat by mistake, **tell them to revoke it immediately*
 
 ## Path B — You're a chat-only AI (guide the user)
 
-You can't touch their PC. Print clear instructions and let the user execute them. **Don't waste time pretending or apologizing — just give the steps.**
+You can't touch their PC. **Recommend the one-liner install script** (fastest) or fall back to manual paste.
 
-### Step B1 — Prerequisites check (one question)
-
-Ask the user:
-> *„Máš nainstalovaný Node.js? V terminálu zadej `node --version` — pokud to vrátí číslo (např. `v20.11.0`), jsi v pohodě. Pokud ne, stáhni LTS verzi z https://nodejs.org a po instalaci pokračujeme."*
-
-### Step B2 — Generate token
+### Step B1 — Recommend one-liner install (PREFERRED)
 
 Tell user:
-> *„V Revelor dashboardu otevři `🤖 API tokeny pro agenty` → `+ Nový token` → vyber roli (`🛡️ read only` nebo `🚀 full access`). Po vygenerování klikni `Kopírovat config` — dostaneš hotový JSON blok."*
 
-### Step B3 — Paste into config
+> *„Nejjednodušší cesta — otevři terminál a vlož **jeden řádek**:"*
 
-Tell user the path (per their OS):
+Then give them the right command for their OS:
 
-| OS | Path |
-|----|------|
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Linux | `~/.config/Claude/claude_desktop_config.json` |
+**macOS / Linux:**
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.sh)
+```
 
-Print the JSON block (Step 3 in Path A) and tell them to paste it, replacing the token + URL placeholders **directly in the file** (not in chat).
+**Windows (PowerShell):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.ps1 | iex
+```
 
-### Step B4 — Restart Claude Desktop
+Tell them the script will:
+- Ask for API token (vygeneruje v Revelor dashboardu — `🤖 API tokeny pro agenty` → `+ Nový token`)
+- Ask for base URL of their Revelor instance
+- Automatically backup + update `claude_desktop_config.json`
+- Tell them to restart Claude Desktop
 
-> *„Zavři Claude Desktop úplně (ne jen okno — ikona v system tray → Quit). Pak ho znovu spusť."*
+**Important — security tip:** *„Token vlož **přímo do terminálu, ne do tohoto chatu**. Skript ho zpracuje skrytě a uloží jen do tvého configu, nikam jinam."*
 
-### Step B5 — Test
+### Step B2 — Fallback (manual paste) — only if one-liner fails
 
-> *„V nové konverzaci napiš: 'Použij Revelor MCP, zavolej health'. Pokud uvidíš JSON s tenant_id a komponenty, MCP funguje."*
+If user can't run scripts (corporate restrictions, terminal disabled), give them manual instructions:
 
-### Step B6 — Onboard (always do this regardless of path)
+1. Generate token in dashboard, click `Kopírovat config`
+2. Open `claude_desktop_config.json`:
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Linux: `~/.config/Claude/claude_desktop_config.json`
+3. Paste the JSON block (Step 3 in Path A) directly into the file
+4. Save + restart Claude Desktop
+
+### Step B3 — Restart + test
+
+> *„Zavři Claude Desktop úplně (system tray → Quit, ne jen okno). Pak ho spusť znovu. V nové konverzaci napiš: 'Použij Revelor MCP, zavolej health'. Pokud vidíš JSON s tenant_id a komponenty, MCP funguje."*
+
+### Step B4 — Onboard (always do this)
 
 Send the user the welcome message from [Step 7 — Onboard the user](#step-7--onboard-the-user-proactively-show-what-they-can-do) below.
 
