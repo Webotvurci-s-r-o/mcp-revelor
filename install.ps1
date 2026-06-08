@@ -119,8 +119,11 @@ $cfg["mcpServers"][$entryName] = [ordered]@{
     }
 }
 
-# Write back
-$cfg | ConvertTo-Json -Depth 10 | Out-File $config -Encoding utf8
+# Write back — UTF-8 BEZ BOM
+# (PS 5.1 default `Out-File -Encoding utf8` vlozi BOM, Claude Desktop Node.js
+# JSON.parse to neumi a tise selze -> zadny MCP server se nenahraje.)
+$jsonOutput = $cfg | ConvertTo-Json -Depth 10
+[System.IO.File]::WriteAllText($config, $jsonOutput, (New-Object System.Text.UTF8Encoding($false)))
 
 # Clear plain-text token from memory ASAP
 $token = $null
@@ -129,9 +132,46 @@ $token = $null
 Write-Host ""
 Write-Color "OK Config aktualizovan: $config" Green
 Write-Host ""
-Write-Color "Nyni:" Yellow
-Write-Host "  1. Zavri Claude Desktop UPLNE (system tray -> Quit, ne jen zavrit okno)"
-Write-Host "  2. Spust ho znovu"
-Write-Host "  3. V nove konverzaci zkus napsat: 'Pouzij Revelor MCP, zavolej health'"
+Write-Color "=== Dalsi kroky ===" Cyan
+Write-Host ""
+Write-Color "1. Ukoncit Claude Desktop UPLNE (ne jen zavrit okno)" Yellow
+Write-Host "   - V system tray (vpravo dole, vedle hodin) najdi ikonu Claude"
+Write-Host "   - Klikni pravym -> Quit / Ukoncit"
+Write-Host "   - POZOR: pouhe zavreni okna (X) ho nevypne, bezi dal v tray"
+Write-Host "   - Pripadne pres Task Manager: ukoncit vsechny 'Claude.exe' procesy"
+Write-Host ""
+Write-Color "2. Spustit Claude Desktop znovu" Yellow
+Write-Host "   - Pri prvnim spusteni stahne npx automaticky balicek mcp-revelor"
+Write-Host "     (cca 5-30 sekund podle rychlosti internetu)"
+Write-Host ""
+Write-Color "3. Overit ze MCP server bezi" Yellow
+Write-Host "   - Otevri novou konverzaci"
+Write-Host "   - Dole v chat vstupnim poli klikni na ikonu se 'sliderem' / 'pluginy'"
+Write-Host "     (Settings & tools -> Connectors / Tools)"
+Write-Host "   - Mel bys videt 'mcp-revelor' v seznamu pripojenych nastroju"
+Write-Host "   - Pokud tam neni: viz Troubleshooting nize"
+Write-Host ""
+Write-Color "4. Vyzkousej dotaz" Yellow
+Write-Host "   - Napis: 'Pouzij Revelor MCP, zavolej health'"
+Write-Host "   - Claude zavola nastroj a vrati zdravotni stav e-shopu"
+Write-Host ""
+Write-Color "=== Troubleshooting ===" Cyan
+Write-Host ""
+Write-Host "Pokud Claude Desktop nezobrazi mcp-revelor v Tools:"
+Write-Host ""
+Write-Host "  a) Overit ze config je validni JSON:"
+Write-Host "     Get-Content '$config' | ConvertFrom-Json"
+Write-Host "     (Mel by vypsat strukturu bez chyby)"
+Write-Host ""
+Write-Host "  b) Mrknout do logu Claude Desktop:"
+Write-Host "     `$env:APPDATA\Claude\logs\"
+Write-Host "     Hledat 'mcp-revelor' nebo 'mcp' v souborech mcp*.log"
+Write-Host ""
+Write-Host "  c) Manualne overit npx:"
+Write-Host "     npx -y github:Webotvurci-s-r-o/mcp-revelor --help"
+Write-Host "     (Pokud selze, problem je v Node.js / npm konfiguraci)"
+Write-Host ""
+Write-Host "  d) Backup configu byl ulozen do:"
+Write-Host "     $config.backup-*"
 Write-Host ""
 Write-Color "Hotovo!" Green
