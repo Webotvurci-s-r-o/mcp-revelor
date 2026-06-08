@@ -2,13 +2,28 @@
 # Usage:
 #   iwr -useb https://raw.githubusercontent.com/Webotvurci-s-r-o/mcp-revelor/main/install.ps1 | iex
 #
-# IMPORTANT: when piping from iwr | iex, interactive Read-Host can be flaky in some
-# PowerShell hosts. If that happens, save the script locally and run it directly.
+# Kompatibilita: Windows PowerShell 5.1 (Win10/11 default) i PowerShell 7+.
 
 $ErrorActionPreference = "Stop"
 
 function Write-Color($Text, $Color = "White") {
     Write-Host $Text -ForegroundColor $Color
+}
+
+# Convert PSCustomObject (z ConvertFrom-Json) na OrderedDictionary
+# rekurzivne — abychom mohli pridavat / cist klice jednotne.
+function ConvertTo-OrderedDict {
+    param($InputObject)
+    if ($null -eq $InputObject) { return [ordered]@{} }
+    $dict = [ordered]@{}
+    foreach ($prop in $InputObject.PSObject.Properties) {
+        if ($prop.Value -is [PSCustomObject]) {
+            $dict[$prop.Name] = ConvertTo-OrderedDict $prop.Value
+        } else {
+            $dict[$prop.Name] = $prop.Value
+        }
+    }
+    return $dict
 }
 
 Write-Color "=== Revelor MCP installer ===" Cyan
@@ -68,27 +83,29 @@ if (Test-Path $config) {
     Write-Color "OK Backup vytvoren: $backup" Green
 }
 
-# Read existing config or start fresh
-$cfg = if (Test-Path $config) {
+# Read existing config (parse via PSCustomObject — funguje v PS 5.1 i 7+)
+$cfg = [ordered]@{}
+if (Test-Path $config) {
     try {
         $content = Get-Content $config -Raw -Encoding UTF8
-        if ([string]::IsNullOrWhiteSpace($content)) {
-            [ordered]@{}
-        } else {
-            $content | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+        if (-not [string]::IsNullOrWhiteSpace($content)) {
+            $parsed = $content | ConvertFrom-Json -ErrorAction Stop
+            $cfg = ConvertTo-OrderedDict $parsed
         }
     } catch {
         Write-Color "WARN: Existing config neni validni JSON, startuju cisty." Yellow
-        [ordered]@{}
+        $cfg = [ordered]@{}
     }
-} else {
-    [ordered]@{}
 }
 
-# Ensure mcpServers exists
-if (-not $cfg.ContainsKey("mcpServers")) {
+# Ensure mcpServers exists (.Contains funguje na hashtable i OrderedDictionary)
+if (-not $cfg.Contains("mcpServers")) {
     $cfg["mcpServers"] = [ordered]@{}
 }
+
+# Pokud mcpServers prislo z JSON jako neco jineho nez OrderedDictionary,
+# nech ho byt — Pridat klic ale ne prepisovat strukturu.
+# (Vyjimka: pokud je to PSCustomObject, prevedeme — to uz delame v ConvertTo-OrderedDict.)
 
 # Add/update entry
 $cfg["mcpServers"][$entryName] = [ordered]@{
