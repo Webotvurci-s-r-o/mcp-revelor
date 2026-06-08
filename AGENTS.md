@@ -1,14 +1,89 @@
 # AGENTS.md — Auto-setup guide for AI assistants
 
-> **For AI agents (Claude, Cursor, Copilot...):** if the user asks to install this MCP, follow these steps. **Ask for the minimum, do the rest yourself.**
+> **For AI agents (Claude, Cursor, Copilot, Claude Code...):** if the user asks to install this MCP, follow this guide.
+>
+> **Ask for the minimum, do the rest yourself — IF you can.**
 
-## Goal
+## Step 0 — Detect your own capabilities first
+
+**Before you start, honestly check what you can do:**
+
+| Your environment | Can you edit user's files? | Can you run shell commands on user's machine? | Follow Path |
+|------------------|----------------------------|-----------------------------------------------|-------------|
+| **Claude Code (CLI)** | ✅ yes | ✅ yes | **A — auto-install** |
+| **Cursor with file tools** | ✅ yes | ✅ yes (with permission) | **A — auto-install** |
+| **Copilot agent / IDE with terminal** | ✅ yes | ✅ yes | **A — auto-install** |
+| **claude.ai web chat** | ❌ no — sandboxed | ❌ no | **B — guide user** |
+| **Claude Desktop chat window** | ❌ no — chat UI only | ❌ no | **B — guide user** |
+| **Any chat-only AI** | ❌ no | ❌ no | **B — guide user** |
+
+**⚠️ Don't pretend you can do something you can't.** If the user says *"můžeš to udělat za mě / máš mé svolení"* but you are a chat-only AI, **explain that it's a capability issue, not a permissions issue**: you have no channel to their filesystem.
+
+Sample honest answer (in Czech):
+> *„Není to permissions issue — je to capability issue. Já běžím v izolovaném prostředí, které nemá žádné spojení s tvým PC. Kdybys mi dal milion oprávnění, pořád nemám kanál k tvému disku. Ale projdu to s tebou krok po kroku — bude to rychlé."*
+
+## Goal (both paths)
 
 Add an entry to the user's MCP client config so it can talk to the user's Revelor instance.
 
 ---
 
-## Step 1 — Ask the user for only TWO things
+## 🔐 Token safety — ALWAYS
+
+Tokens (`rvlr_*`) are like passwords. **NEVER**:
+- Echo the user's token back in your response
+- Ask them to paste the token in chat — they should paste it directly into the config file
+- Suggest sending the token via email / Slack / chat
+
+If user pastes a token in chat by mistake, **tell them to revoke it immediately** in the Revelor dashboard (and acknowledge the risk briefly, don't moralize).
+
+---
+
+---
+
+## Path B — You're a chat-only AI (guide the user)
+
+You can't touch their PC. Print clear instructions and let the user execute them. **Don't waste time pretending or apologizing — just give the steps.**
+
+### Step B1 — Prerequisites check (one question)
+
+Ask the user:
+> *„Máš nainstalovaný Node.js? V terminálu zadej `node --version` — pokud to vrátí číslo (např. `v20.11.0`), jsi v pohodě. Pokud ne, stáhni LTS verzi z https://nodejs.org a po instalaci pokračujeme."*
+
+### Step B2 — Generate token
+
+Tell user:
+> *„V Revelor dashboardu otevři `🤖 API tokeny pro agenty` → `+ Nový token` → vyber roli (`🛡️ read only` nebo `🚀 full access`). Po vygenerování klikni `Kopírovat config` — dostaneš hotový JSON blok."*
+
+### Step B3 — Paste into config
+
+Tell user the path (per their OS):
+
+| OS | Path |
+|----|------|
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Linux | `~/.config/Claude/claude_desktop_config.json` |
+
+Print the JSON block (Step 3 in Path A) and tell them to paste it, replacing the token + URL placeholders **directly in the file** (not in chat).
+
+### Step B4 — Restart Claude Desktop
+
+> *„Zavři Claude Desktop úplně (ne jen okno — ikona v system tray → Quit). Pak ho znovu spusť."*
+
+### Step B5 — Test
+
+> *„V nové konverzaci napiš: 'Použij Revelor MCP, zavolej health'. Pokud uvidíš JSON s tenant_id a komponenty, MCP funguje."*
+
+### Step B6 — Onboard (always do this regardless of path)
+
+Send the user the welcome message from [Step 7 — Onboard the user](#step-7--onboard-the-user-proactively-show-what-they-can-do) below.
+
+---
+
+## Path A — You CAN touch the user's filesystem (full automation)
+
+### Step 1 — Ask the user for only TWO things
 
 1. **API token** (starts with `rvlr_`)
    - Where to find: their Revelor dashboard → tab `🤖 API tokeny pro agenty` → `+ Nový token`
@@ -199,11 +274,29 @@ See [README.md](README.md) § *Security model* for full guarantees.
 
 ## TL;DR for AI
 
+**Step 0 — check your own capabilities first.** If you can edit files + run shell on user's machine → Path A. If you're chat-only → Path B.
+
+### TL;DR (Path A — full automation)
+
 1. Ask user for `rvlr_` token and Revelor base URL.
 2. Find `claude_desktop_config.json` (or equivalent).
-3. Merge in the `mcp-revelor` entry shown in Step 3.
+3. Merge in the `mcp-revelor` entry.
 4. Tell user to restart Claude Desktop.
 5. After restart: verify with *"Use Revelor MCP, call health"*.
-6. **Onboard** — send the welcome message from Step 7 with 5–10 example prompts. Don't leave user with "now what?".
+6. **Onboard** — send the welcome message from Step 7 with 5–10 example prompts.
+
+### TL;DR (Path B — chat-only, guide user)
+
+1. Check Node.js is installed.
+2. Tell user to generate token in Revelor dashboard and click `Kopírovat config`.
+3. Show them the path to `claude_desktop_config.json` for their OS.
+4. Give them the JSON block to paste (they paste, you don't see the token).
+5. Tell them to restart Claude Desktop and test with *"Use Revelor MCP, call health"*.
+6. **Onboard** — same welcome message as Path A.
+
+### Don't:
+- Don't pretend you can edit files when you can't.
+- Don't ask the user to paste their token in chat.
+- Don't leave the user with *"now what?"* — always onboard with examples.
 
 Done.
