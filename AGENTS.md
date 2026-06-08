@@ -50,7 +50,7 @@ For other clients see [§ Other MCP clients](#other-mcp-clients) below.
   "mcpServers": {
     "mcp-revelor": {
       "command": "npx",
-      "args": ["-y", "@webotvurci-s-r-o/mcp-revelor"],
+      "args": ["-y", "github:Webotvurci-s-r-o/mcp-revelor"],
       "env": {
         "REVELOR_API_KEY": "<USER'S TOKEN — starts with rvlr_>",
         "REVELOR_BASE_URL": "<USER'S BASE URL — https://...>"
@@ -70,8 +70,8 @@ For each additional shop, ask the user for one more token+URL and add a separate
 
 ```json
 "mcpServers": {
-  "mcp-revelor-shop-a": { "command": "npx", "args": ["-y", "@webotvurci-s-r-o/mcp-revelor"], "env": { "REVELOR_API_KEY": "rvlr_aaa...", "REVELOR_BASE_URL": "https://shop-a.revelor.cz" } },
-  "mcp-revelor-shop-b": { "command": "npx", "args": ["-y", "@webotvurci-s-r-o/mcp-revelor"], "env": { "REVELOR_API_KEY": "rvlr_bbb...", "REVELOR_BASE_URL": "https://shop-b.revelor.cz" } }
+  "mcp-revelor-shop-a": { "command": "npx", "args": ["-y", "github:Webotvurci-s-r-o/mcp-revelor"], "env": { "REVELOR_API_KEY": "rvlr_aaa...", "REVELOR_BASE_URL": "https://shop-a.revelor.cz" } },
+  "mcp-revelor-shop-b": { "command": "npx", "args": ["-y", "github:Webotvurci-s-r-o/mcp-revelor"], "env": { "REVELOR_API_KEY": "rvlr_bbb...", "REVELOR_BASE_URL": "https://shop-b.revelor.cz" } }
 }
 ```
 
@@ -162,11 +162,11 @@ One command:
 claude mcp add mcp-revelor \
   --env REVELOR_API_KEY=<token> \
   --env REVELOR_BASE_URL=<url> \
-  -- npx -y @webotvurci-s-r-o/mcp-revelor
+  -- npx -y github:Webotvurci-s-r-o/mcp-revelor
 ```
 
 ### Custom / generic MCP client
-The MCP server uses **stdio transport**. Spawn `npx -y @webotvurci-s-r-o/mcp-revelor` as a child process with the two env vars and talk JSON-RPC over stdin/stdout.
+The MCP server uses **stdio transport**. Spawn `npx -y github:Webotvurci-s-r-o/mcp-revelor` as a child process with the two env vars and talk JSON-RPC over stdin/stdout.
 
 ---
 

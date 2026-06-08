@@ -37,7 +37,7 @@ Otevři `claude_desktop_config.json`:
   "mcpServers": {
     "mcp-revelor": {
       "command": "npx",
-      "args": ["-y", "@webotvurci-s-r-o/mcp-revelor"],
+      "args": ["-y", "github:Webotvurci-s-r-o/mcp-revelor"],
       "env": {
         "REVELOR_API_KEY": "rvlr_tvuj_token",
         "REVELOR_BASE_URL": "https://tvuje-shop.revelor.cz"
@@ -87,7 +87,7 @@ Pokud spravuješ víc Revelor instancí, přidej více záznamů pod `mcpServers
   "mcpServers": {
     "mcp-revelor-eshop-a": {
       "command": "npx",
-      "args": ["-y", "@webotvurci-s-r-o/mcp-revelor"],
+      "args": ["-y", "github:Webotvurci-s-r-o/mcp-revelor"],
       "env": {
         "REVELOR_API_KEY": "rvlr_aaa...",
         "REVELOR_BASE_URL": "https://eshop-a.revelor.cz"
@@ -95,7 +95,7 @@ Pokud spravuješ víc Revelor instancí, přidej více záznamů pod `mcpServers
     },
     "mcp-revelor-eshop-b": {
       "command": "npx",
-      "args": ["-y", "@webotvurci-s-r-o/mcp-revelor"],
+      "args": ["-y", "github:Webotvurci-s-r-o/mcp-revelor"],
       "env": {
         "REVELOR_API_KEY": "rvlr_bbb...",
         "REVELOR_BASE_URL": "https://eshop-b.revelor.cz"
